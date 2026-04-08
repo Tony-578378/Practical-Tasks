@@ -1,0 +1,75 @@
+---
+title: "Compare_the_volatility_of_stock_market_indices"
+output: html_document
+date: "2026-04-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This R Markdown programme aims to compare the volatility of the indices of DJIA, the S&P 500, and the Wilshire 5000 Market 
+Index.
+
+```{r}
+library(quantmod)
+```
+
+## Including Plots
+
+Now we first visit http://research.stlouisfed.org/fred2/ to get the data for three stock market indices we are interested in.
+
+```{r}
+# Use reliable FRED tickers
+# Note: quantmod often creates an object named after the ticker.
+# These specific tickers (DJIA, SP500, WILL5000INDFC) are standard for FRED data.
+getSymbols(c("DJIA", "SP500", "WILL5000INDFC"), src = "FRED")
+```
+
+It seems that FRED does not contain data for the Wilshire 5000 Market Index, so we will look for them in Yahoo Finance.
+
+```{r}
+getSymbols("^W5000", src = "yahoo")
+```
+
+```{r}
+# Set start year to 1985
+start_date <- "1985-01-01"
+```
+
+Now we will clean the data.
+
+```{r}
+# Extract Close price and subset, then remove NAs
+# Subsetting is done via "YYYY-MM-DD/" format
+djia <- na.omit(DJIA[paste0(start_date, "/")])
+sp500 <- na.omit(SP500[paste0(start_date, "/")])
+wilshire <- na.omit(Cl(W5000)[paste0(start_date, "/")])#Yahoo Finance contains the "Close" column while Federal does not.
+```
+
+```{r}
+# Normalise to 1 at the start by dividing the series by its first value
+djia_norm <- djia / as.numeric(djia[1])
+sp500_norm <- sp500 / as.numeric(sp500[1])
+wilshire_norm <- wilshire / as.numeric(wilshire[1])
+```
+
+Finally we can plot the data to compare the volatility.
+
+```{r}
+# Plotting the data (quantmod handles the colors/legend automatically)
+combined_data <- merge(djia_norm, sp500_norm, wilshire_norm)
+plot(
+  combined_data, 
+  main = "Index Growth Since 1985", 
+  ylab = "Growth (Indexed to 1)", 
+  xlab = "Year",
+  # Set colors explicitly for consistency
+  col = c("blue", "red", "green"),
+)
+```
+
+Although data are plotted from 2007, it is obvious that Wilshire 5000 (green one) is the most volatile among the three. Investing in Wilshire 5000 was probably the best choice in 1985.
+
