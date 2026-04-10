@@ -4,7 +4,7 @@ output: html_document
 date: "2026-04-08"
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -61,14 +61,18 @@ Finally we can plot the data to compare the volatility.
 ```{r}
 # Plotting the data (quantmod handles the colors/legend automatically)
 combined_data <- merge(djia_norm, sp500_norm, wilshire_norm)
+jpeg(file="Stock_Market_Index.jpeg")
 plot(
   combined_data, 
-  main = "Index Growth Since 1985", 
+  main = "Index Growth Since 1985
+  (Blue:DJIA,Red:S&P 500,Green:Wilshire 5000)", 
   ylab = "Growth (Indexed to 1)", 
   xlab = "Year",
   # Set colors explicitly for consistency
   col = c("blue", "red", "green"),
 )
+
+dev.off()
 ```
 
 Although data are plotted from 2007, it is obvious that Wilshire 5000 (green one) is the most volatile among the three. Investing in Wilshire 5000 was probably the best choice in 1985.
