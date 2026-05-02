@@ -7,7 +7,7 @@ View(credit_cards)
 credit_cards$LateApril <- ifelse(credit_cards$LateApril == "TRUE", 1, 0) #Treat TRUE as 1 and FALSE as 0.
 
 logr_bill <- glm(LateApril ~ BillApril, data = credit_cards, family = binomial) #The response variable is either 1 or 0, so we choose the "binomial" family. 
-#This uses a logistic regression, which is, log(p/(1 - p)) = β0 + β1 * BillApril, where p = Pr(LateApril) = 1.
+#This uses a logistic regression, which is, log(p/(1 - p)) = β0 + β1 * BillApril, where p = Pr(LateApril = 1).
 
 summary(logr_bill)
 coef(logr_bill)
