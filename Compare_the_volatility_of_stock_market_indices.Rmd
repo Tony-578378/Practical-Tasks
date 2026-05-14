@@ -10,8 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-This R Markdown programme aims to compare the volatility of the indices of DJIA, the S&P 500, and the Wilshire 5000 Market 
-Index.
+This R Markdown programme aims to compare the volatility of the indices of DJIA, the S&P 500, and the Wilshire 5000 Market Index. Then use VAR to forecast the future volatility of the three indices.
 
 ```{r}
 library(quantmod)
@@ -76,4 +75,103 @@ dev.off()
 ```
 
 Although data are plotted from 2007, it is obvious that Wilshire 5000 (green one) is the most volatile among the three. Investing in Wilshire 5000 was probably the best choice in 1985.
+
+# Forecasting
+
+Convert the data to log-returns, where $$r_t=log\frac{P_t}{P_{t-1}}$$. Since prices compound exponentially over long periods.
+
+```{r}
+returns <- na.omit(diff(log(combined_data)))
+```
+
+Check stationarity.
+
+```{r}
+library(tseries)
+
+adf.test(returns$DJIA)
+adf.test(returns$SP500)
+adf.test(returns$W5000.Close)#p<0.01, all three reject the null hypothesis that the time-series is non-stationary, which means they are stationary.
+```
+
+Select lag length.
+
+```{r}
+library(vars)
+
+VARselect(returns, lag.max = 10, type = "const")
+#AIC and FPE suggest lag = 9, while HQ and SC/BIC suggest lag = 1. For forecasting, AIC and FPE, which favour predictive accuracy, are preferred. So lag = 9 will be used.
+```
+
+Fit VAR.
+
+A VAR(9) will be fitted, which has a structure $$Y_t=c+A_1Y_{t-1}+A_2Y_{t-2}+...+A_9Y_{t-9}+\epsilon_t$$.
+
+```{r}
+var_model <- VAR(returns, p = 9, type = "const")
+```
+
+Forecast.
+
+```{r}
+forecast_var <- predict(var_model, n.ahead = 100)
+```
+
+Plot forecasts.
+
+```{r}
+png("Stock_Returns_Forecast.png", width = 1000, height = 600)
+plot(forecast_var)
+dev.off()
+#This reflects the concept of random walk in financial economics, that the best prediction for tomorrow's return is close to 0, and investors should focus on long-term trends.
+#The huge spike around 900 probably reflects the 2008 financial crisis.
+```
+
+Convert DJIA return forecasts back to prices and view.
+
+```{r}
+DJIA_return_forecast <- forecast_var$fcst$DJIA[, "fcst"]
+
+last_DJIA_price <- as.numeric(tail(combined_data$DJIA, 1))
+
+DJIA_price_forecast <- last_DJIA_price * exp(cumsum(DJIA_return_forecast))
+
+png("Stock_DJIA_Price_Forecast.png", width = 1000, height = 600)
+plot(DJIA_price_forecast,
+     type = "l",
+     main = "DJIA Forecasted Price",
+     xlab = "Forecast horizon",
+     ylab = "Forecasted price")
+dev.off()
+#This shows that stock prices are hard to forecast.
+```
+
+Check for Granger causality.
+
+This tests the following hypothesis for identifying the causal effect of X on Y:
+$$\mathbb{P}[\boldsymbol{Y}(t+1) \in A \mid \mathcal{I}(t)] \neq \mathbb{P}[\boldsymbol{Y}(t+1) \in A \mid \mathcal{I}_{-X}(t)]$$.
+
+```{r}
+causality(var_model, cause = "DJIA")
+#DJIA does not help predict S&P 500 and Wilshire 5000.
+```
+
+Impulse Response Functions (IRF).
+
+```{r}
+png("Stock_DJIA_IRF.png", width=1800, height=1200, res=300)
+plot(irf(var_model, impulse = "DJIA"))
+dev.off()
+
+png("Stock_SP500_IRF.png", width=1800, height=1200, res=300)
+plot(irf(var_model, impulse = "SP500"))
+dev.off()
+
+png("Stock_W5000_IRF.png", width=1800, height=1200, res=300)
+plot(irf(var_model, impulse = "W5000.Close"))
+dev.off()
+#These perform the reactions of one stock in response to a shock to another.
+```
+
+There are lots of other forecasting models to apply and a lot more work to do, but I will not discuss them here.
 
